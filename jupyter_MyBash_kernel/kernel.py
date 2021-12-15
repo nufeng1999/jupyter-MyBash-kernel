@@ -202,6 +202,7 @@ class MyKernel(Kernel):
         self.wAll = True # show all warnings by default
         self.wError = False # but keep comipiling for warnings
         self.sys = platform.system()
+        self.subsys=self.getossubsys()
         self.files = []
         self.isdstr=False
         self.issstr=False
@@ -690,7 +691,10 @@ echo "OK"
         try:
             if env==None or len(env)<1:
                 env=os.environ
-            if magics!=None and len(magics['runinterm'])>0 and len(magics['term'])>0:
+            if magics!=None and len(magics['runinterm'])>0:
+                self.inittermcmd(magics)
+                if len(magics['term'])<1:
+                    self._logln("no term！",2)
                 execfile=''
                 for x in cmd:
                     execfile+=x+" "
@@ -711,14 +715,43 @@ echo "OK"
         except Exception as e:
             self._write_to_stdout("RealTimeSubprocess err:"+str(e))
             raise
+    def getossubsys(self):
+        uname=''
+        try:
+            u=os.popen('bash -c "uname"')
+            uname=u.read()
+        except Exception as e:
+            self._logln(""+str(e),3)
+        return uname
+    def inittermcmd(self,magics):
+        if len(magics['term'])>0:return ''
+        termcmd=''
+        try:
+            if self.subsys.startswith('MINGW64') or self.subsys.startswith('CYGWIN'):
+                termcmd='mintty "/usr/bin/bash" --login'
+            if self.sys=='Linux':
+                termcmd='gnome-terminal'
+        except Exception as e:
+            self._logln(""+str(e),3)
+        if len(termcmd)>1:
+            magics['term']=[]
+            for argument in re.findall(r'(?:[^\s,"]|"(?:\\.|[^"])*")+', termcmd):
+                magics['term'] += [argument.strip('"')]
+        return termcmd
     def create_termrunsh(self,execfile,magics):
         fil_ename=execfile
+        uname=''
+        try:
+            u=os.popen('bash -c "uname"')
+            uname=u.read()
+        except Exception as e:
+            self._logln(""+str(e),3)
         if self.sys=='Windows':
             termrunsh="echo off\r\ncls\r\n"+execfile+"\r\npause\r\nexit\r\n"
             termrunsh_file=self.create_codetemp_file(magics,termrunsh,suffix='.bat')
             newsrcfilename=termrunsh_file.name
             fil_ename=newsrcfilename
-        elif self.sys=='Linux':
+        if self.sys=='Linux' or self.subsys.startswith('MINGW64') or self.subsys.startswith('CYGWIN'):
             pausestr=self.pausestr
             termrunsh="\n"+execfile+"\n"+pausestr+"\n"
             termrunsh_file=self.create_codetemp_file(magics,termrunsh,suffix='.sh')
@@ -1100,10 +1133,10 @@ echo "OK"
 class BashKernel(MyKernel):
     implementation = 'jupyter_MyBash_kernel'
     implementation_version = '1.0'
-    language = 'shell'
+    language = 'Shell Script'
     language_version = '2.X.X'
-    language_info = {'name': 'text/x-sh',
-                     'mimetype': 'text/x-sh',
+    language_info = {'name': 'shellscript',
+                     'mimetype': 'text/x-shellscript',
                      'file_extension': '.sh'}
     runfiletype='script'
     banner = "Bash kernel.\n" \
@@ -1125,9 +1158,7 @@ class BashKernel(MyKernel):
         u=''
         realpath=filename
         try:
-            u=os.popen('bash -c "uname"')
-            uname=u.read()
-            if uname.startswith('MINGW64') or uname.startswith('CYGWIN'):
+            if self.subsys.startswith('MINGW64') or self.subsys.startswith('CYGWIN'):
                 r=os.popen('bash -c "cygpath '+filename+'"')
                 realpath=r.read()
         except Exception as e:
