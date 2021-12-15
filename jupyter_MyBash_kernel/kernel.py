@@ -1127,7 +1127,7 @@ class BashKernel(MyKernel):
         try:
             u=os.popen('bash -c "uname"')
             uname=u.read()
-            if uname.startswith('MINGW64'):
+            if uname.startswith('MINGW64') or uname.startswith('CYGWIN'):
                 r=os.popen('bash -c "cygpath '+filename+'"')
                 realpath=r.read()
         except Exception as e:
