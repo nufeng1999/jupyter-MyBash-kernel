@@ -283,6 +283,8 @@ echo "OK"
             li= [i for i in li if i != '']
             env_dict[str(li[0])]=li[1]
         return env_dict
+    def get_magicsSvalue(self,magics:Dict,key:str):
+        return self.addmagicsSkey(magics,key)
     def addmagicsSkey(self,magics:Dict,key:str,func=None):
         return self.addmagicskey2(magics=magics,key=key,type='st',func=func)
     def addmagicsBkey(self,magics:Dict,key:str,func=None):
@@ -947,28 +949,17 @@ echo "OK"
         except Exception as e:
             self._log(""+str(e),3)
         return self.get_retinfo()
-    def dor_runcode(self,return_code,fil_ename,magics,code, silent, store_history=True,
+    def dor_create_codefile(self,magics,code, silent, store_history=True,
                     user_expressions=None, allow_stdin=True):    
-        return_code=return_code
-        fil_ename=fil_ename
+        return_code=0
+        fil_ename=''
         bcancel_exec=False
         retinfo=self.get_retinfo()
         retstr=''
-        runprg=self.get_magicsbykey(magics,'runprg')
-        runprgargs=self.get_magicsbykey(magics,'runprgargs')
-        if (len(runprgargs)<1):
-            self._logln("No label runprgargs!",2)
-        p = self.create_jupyter_subprocess([runprg]+ runprgargs,cwd=None,shell=False,env=self.addkey2dict(magics,'env'))
-        self.g_rtsps[str(p.pid)]=p
-        return_code=p.returncode
-        bcancel_exec,retstr=self.raise_plugin(code,magics,return_code,fil_ename,3,2)
-        if len(self.addkey2dict(magics,'showpid'))>0:
-            self._logln("The process PID:"+str(p.pid))
-        return_code=p.wait_end(magics)
-        # self._logln("The process end:"+str(p.pid))
-        # return_code=p.returncode
-        if p.returncode != 0:
-            self._logln("Executable exited with code {}".format(p.returncode),2)
+        source_file=self.create_codetemp_file(magics,code,suffix='.sh')
+        newsrcfilename=source_file.name
+        fil_ename=newsrcfilename
+        return_code=True
         return bcancel_exec,retinfo,magics, code,fil_ename,retstr
     def dor_create_codefile(self,magics,code, silent, store_history=True,
                     user_expressions=None, allow_stdin=True):    
@@ -982,11 +973,18 @@ echo "OK"
         fil_ename=newsrcfilename
         return_code=True
         return bcancel_exec,retinfo,magics, code,fil_ename,retstr
-    def dor_preexecute(self,code,magics,silent, store_history=True,
-                user_expressions=None, allow_stdin=False):        
+    def dor_create_codefile(self,magics,code, silent, store_history=True,
+                    user_expressions=None, allow_stdin=True):    
+        return_code=0
+        fil_ename=''
         bcancel_exec=False
         retinfo=self.get_retinfo()
-        return bcancel_exec,retinfo,magics, code
+        retstr=''
+        source_file=self.create_codetemp_file(magics,code,suffix='.sh')
+        newsrcfilename=source_file.name
+        fil_ename=newsrcfilename
+        return_code=True
+        return bcancel_exec,retinfo,magics, code,fil_ename,retstr
     def do_execute(self, code, silent, store_history=True,
                    user_expressions=None, allow_stdin=True):
         self.silent = silent
@@ -1168,34 +1166,62 @@ class BashKernel(MyKernel):
         self.linkMaths = True # always link math library
         self.wAll = True # show all warnings by default
         self.wError = False # but keep comipiling for warnings
-    def do_preexecute(self,code, magics,silent, store_history=True,
-                user_expressions=None, allow_stdin=False):
+    def getrealpath(self,filename):
+        u=''
+        realpath=filename
+        try:
+            if self.subsys.startswith('MINGW64') or self.subsys.startswith('CYGWIN'):
+                r=os.popen('bash -c "cygpath '+filename+'"')
+                realpath=r.read()
+        except Exception as e:
+            self._logln(""+str(e),3)
+        return realpath
+    def do_runcode(self,return_code,fil_ename,magics,code, silent, store_history=True,
+                    user_expressions=None, allow_stdin=True):
+        return_code=return_code
+        fil_ename=fil_ename
         bcancel_exec=False
         retinfo=self.get_retinfo()
+        retstr=''
+        # bcancel_exec,retstr=self.raise_plugin(code,magics,return_code,fil_ename,3,1)
+        # if bcancel_exec:return bcancel_exec,retinfo,magics, code,fil_ename,retstr
+        self._logln("The process :"+fil_ename)
+        fil_ename=self.getrealpath(fil_ename)
+        p = self.create_jupyter_subprocess(['sh',fil_ename]+ magics['st']['args'],cwd=None,shell=False,env=self.addkey2dict(magics,'env'),magics=magics)
+        #p = self.create_jupyter_subprocess([binary_file.name]+ magics['args'],cwd=None,shell=False)
+        #p = self.create_jupyter_subprocess([self.master_path, binary_file.name] + magics['args'],cwd='/tmp',shell=True)
+        self.g_rtsps[str(p.pid)]=p
+        return_code=p.returncode
+        # bcancel_exec,retstr=self.raise_plugin(code,magics,return_code,fil_ename,3,2)
+        # if bcancel_exec:return bcancel_exec,retinfo,magics, code,fil_ename,retstr
+        if magics!=None and len(self.addkey2dict(magics,'showpid'))>0:
+            self._write_to_stdout("The process PID:"+str(p.pid)+"\n")
+        return_code=p.wait_end(magics)
+        # self.cleanup_files()
+        if p.returncode != 0:
+            self._log("Executable exited with code {}".format(p.returncode),2)
+        return bcancel_exec,retinfo,magics, code,fil_ename,retstr
+    def do_compile_code(self,return_code,fil_ename,magics,code, silent, store_history=True,
+                    user_expressions=None, allow_stdin=True):
         return_code=0
-        fil_ename=''
-        return bcancel_exec,retinfo,magics, code
-    def do_preexecute(self,code, magics,silent, store_history=True,
-                user_expressions=None, allow_stdin=False):
+        fil_ename=fil_ename
+        sourcefilename=fil_ename
         bcancel_exec=False
         retinfo=self.get_retinfo()
+        retstr=''
+        return bcancel_exec,retinfo,magics, code,fil_ename,retstr
+    def do_create_codefile(self,magics,code, silent, store_history=True,
+                    user_expressions=None, allow_stdin=True):
         return_code=0
         fil_ename=''
-        return bcancel_exec,retinfo,magics, code
-    def do_preexecute(self,code, magics,silent, store_history=True,
-                user_expressions=None, allow_stdin=False):
         bcancel_exec=False
         retinfo=self.get_retinfo()
-        return_code=0
-        fil_ename=''
-        return bcancel_exec,retinfo,magics, code
-    def do_preexecute(self,code, magics,silent, store_history=True,
-                user_expressions=None, allow_stdin=False):
-        bcancel_exec=False
-        retinfo=self.get_retinfo()
-        return_code=0
-        fil_ename=''
-        return bcancel_exec,retinfo,magics, code
+        retstr=''
+        source_file=self.create_codetemp_file(magics,code,suffix='.sh')
+        newsrcfilename=source_file.name
+        fil_ename=newsrcfilename
+        return_code=True
+        return bcancel_exec,retinfo,magics, code,fil_ename,retstr
     def do_preexecute(self,code, magics,silent, store_history=True,
                 user_expressions=None, allow_stdin=False):
         bcancel_exec=False
