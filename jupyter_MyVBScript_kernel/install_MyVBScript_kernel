@@ -13,12 +13,12 @@ kernel_json = {
     "argv": [
         "python3",
         "-m",
-        "jupyter_MyBash_kernel",
+        "jupyter_MyVBScript_kernel",
         "-f",
         "{connection_file}"
     ],
-    "display_name": "MyBash",
-    "language": "shell"
+    "display_name": "MyVBScript",
+    "language": "VBScript"
 }
 
 
@@ -31,7 +31,7 @@ def install_my_kernel_spec(user=True, prefix=None):
         shutil.copy('logo-64x64.png', os.path.join(td,'logo-64x64.png'))
         shutil.copy('logo-32x32.png', os.path.join(td,'logo-32x32.png'))
         print('Installing IPython kernel spec')
-        KernelSpecManager().install_kernel_spec(td, 'MyBash', user=user, prefix=prefix)
+        KernelSpecManager().install_kernel_spec(td, 'MyVBScript', user=user, prefix=prefix)
 
 
 def _is_root():
@@ -43,7 +43,7 @@ def _is_root():
 
 def main(argv=[]):
     parser = argparse.ArgumentParser(
-        description='Install KernelSpec for Dart Kernel'
+        description='Install KernelSpec for VBScript Kernel'
     )
     prefix_locations = parser.add_mutually_exclusive_group()
 
