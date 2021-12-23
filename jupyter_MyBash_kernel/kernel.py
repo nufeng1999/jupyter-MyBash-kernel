@@ -1217,7 +1217,7 @@ class BashKernel(MyKernel):
     language = 'Shell Script'
     language_version = '2.X.X'
     language_info = {'name': 'shellscript',
-                     'mimetype': 'text/x-shellscript',
+                     'mimetype': 'text/shellscript',
                      'file_extension': '.sh'}
     runfiletype='script'
     banner = "Bash kernel.\n" \
