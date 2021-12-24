@@ -814,6 +814,9 @@ echo "OK"
             for argument in re.findall(r'(?:[^\s,"]|"(?:\\.|[^"])*")+', termcmd):
                 magics['_st']['term'] += [argument.strip('"')]
         return termcmd
+##//%overwritefile
+##//%file:../src/create_termrunsh.py
+##//%noruncode
     def create_termrunsh(self,execfile,magics):
         fil_ename=execfile
         uname=''
@@ -822,12 +825,18 @@ echo "OK"
             uname=u.read()
         except Exception as e:
             self._logln(""+str(e),3)
-        if self.sys=='Windows':
+        if self.subsys.startswith('MINGW64') or self.subsys.startswith('CYGWIN'):
+            pausestr=self.pausestr
+            termrunsh="\n"+execfile+"\n"+pausestr+"\n"
+            termrunsh_file=self.create_codetemp_file(magics,termrunsh,suffix='.sh')
+            newsrcfilename=termrunsh_file.name
+            fil_ename=newsrcfilename
+        elif self.sys=='Windows' :
             termrunsh="echo off\r\ncls\r\n"+execfile+"\r\npause\r\nexit\r\n"
             termrunsh_file=self.create_codetemp_file(magics,termrunsh,suffix='.bat')
             newsrcfilename=termrunsh_file.name
             fil_ename=newsrcfilename
-        if self.sys=='Linux' or self.subsys.startswith('MINGW64') or self.subsys.startswith('CYGWIN'):
+        elif self.sys=='Linux':
             pausestr=self.pausestr
             termrunsh="\n"+execfile+"\n"+pausestr+"\n"
             termrunsh_file=self.create_codetemp_file(magics,termrunsh,suffix='.sh')
@@ -1259,9 +1268,7 @@ class BashKernel(MyKernel):
         retinfo=self.get_retinfo()
         retstr=''
         ##代码运行前
-        # bcancel_exec,retstr=self.raise_plugin(code,magics,return_code,fil_ename,3,1)
-        # if bcancel_exec:return bcancel_exec,retinfo,magics, code,fil_ename,retstr
-        self._logln("The process :"+fil_ename)
+        # self._logln("The process :"+fil_ename)
         fil_ename=self.getrealpath(fil_ename)
         p = self.create_jupyter_subprocess(['sh',fil_ename]+ magics['_st']['args'],cwd=None,shell=False,env=self.addkey2dict(magics,'env'),magics=magics)
         #p = self.create_jupyter_subprocess([binary_file.name]+ magics['args'],cwd=None,shell=False)
@@ -1269,8 +1276,6 @@ class BashKernel(MyKernel):
         self.g_rtsps[str(p.pid)]=p
         return_code=p.returncode
         ##代码启动后
-        # bcancel_exec,retstr=self.raise_plugin(code,magics,return_code,fil_ename,3,2)
-        # if bcancel_exec:return bcancel_exec,retinfo,magics, code,fil_ename,retstr
          
         if magics!=None and len(self.addkey2dict(magics,'showpid'))>0:
             self._write_to_stdout("The process PID:"+str(p.pid)+"\n")
