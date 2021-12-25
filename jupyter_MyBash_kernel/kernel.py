@@ -1262,7 +1262,7 @@ class BashKernel(MyKernel):
     implementation = 'jupyter_MyBash_kernel'
     implementation_version = '1.0'
     language = 'Shell Script'
-    language_version = '2.X.X'
+    language_version = ''
     language_info = {'name': 'shellscript',
                      'mimetype': 'text/shellscript',
                      'file_extension': '.sh'}
