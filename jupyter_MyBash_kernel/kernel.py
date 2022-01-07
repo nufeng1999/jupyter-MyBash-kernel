@@ -99,7 +99,7 @@ class BashKernel(MyKernel):
         return_code=return_code
         fil_ename=fil_ename
         bcancel_exec=False
-        retinfo=self.get_retinfo()
+        retinfo=self.mymagics.get_retinfo()
         retstr=''
         ##代码运行前
         # self._logln("The process :"+fil_ename)
